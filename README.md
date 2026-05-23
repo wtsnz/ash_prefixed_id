@@ -165,7 +165,7 @@ JSON:API, AshTypescript RPC, and LiveView.
 - [Legacy Prefixes](guides/legacy-prefixes.md): rename prefixes without breaking old IDs.
 - [API Integrations](guides/api-integrations.md): GraphQL, JSON:API, AshTypescript, and Phoenix routes.
 - [Global Lookup](guides/global-lookup.md): resolve prefixed IDs against an explicit domain allowlist.
-- [Data Layer Support](guides/data-layer-support.md): what is portable, what is Postgres-only, and how to think about AshSqlite.
+- [Data Layer Support](guides/data-layer-support.md): what is portable, what is Postgres-only, and how to configure AshSqlite.
 
 ### Utility Functions
 

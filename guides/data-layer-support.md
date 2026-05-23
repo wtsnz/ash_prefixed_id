@@ -11,6 +11,7 @@ renders stored UUIDs back with the resource prefix.
 The repository currently verifies:
 
 - `Ash.DataLayer.Ets` in the root test suite
+- `AshSqlite.DataLayer` in the root test suite with binary UUID storage
 - `AshPostgres.DataLayer` in the Phoenix example app
 - AshPostgres migration defaults and extension snapshots
 
@@ -44,18 +45,27 @@ layers unless that data layer explicitly supports compatible migration defaults.
 
 ## AshSqlite
 
-AshSqlite should be a good candidate for the core ObjectId behavior because the
-extension operates at the Ash type boundary. It is not currently certified by a
-dedicated regression app in this repository.
+AshSqlite is verified for the core ObjectId behavior when Ecto SQLite is
+configured for binary UUID storage:
 
-Before claiming official AshSqlite support, add a small test app or support
-resource that proves:
+```elixir
+config :ecto_sqlite3, :uuid_type, :binary
+```
+
+Set this before generating SQLite migrations so `:uuid` columns are generated as
+`BLOB` columns. The repository regression test stores and reads raw 16-byte UUID
+values while Ash resources expose prefixed IDs.
+
+The AshSqlite coverage proves:
 
 - primary key generation
 - create/read/update/destroy
 - `belongs_to` foreign keys
 - legacy prefix primary-key lookup
-- generated migrations do not rely on Postgres-only defaults
+- global lookup through `AshPrefixedId.get/3`
+
+Ecto SQLite's default UUID mode is string-based. Keep binary UUID mode if your
+requirement is that database rows remain unprefixed UUID values.
 
 ## Practical Recommendation
 
@@ -63,4 +73,5 @@ For applications today:
 
 - Use the core extension with any data layer that handles Ash UUID types.
 - Use `migration_default?` only with AshPostgres.
-- Treat AshSqlite support as expected but not yet documented as verified.
+- Use AshSqlite with `config :ecto_sqlite3, :uuid_type, :binary` when you need
+  raw UUID storage.

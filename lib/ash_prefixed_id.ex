@@ -129,13 +129,18 @@ defmodule AshPrefixedId do
   ## Data Layer Support
 
   The core ObjectId type stores as `:uuid`, so the prefix/cast/render behavior
-  is not inherently tied to Postgres. ETS is covered by the test suite, and
-  AshPostgres is covered by the example app. Database-side UUIDv7 defaults and
-  `AshPrefixedId.PostgresExtension` are AshPostgres-only.
+  is not inherently tied to Postgres. ETS and AshSqlite are covered by the root
+  test suite, and AshPostgres is covered by the example app. Database-side
+  UUIDv7 defaults and `AshPrefixedId.PostgresExtension` are AshPostgres-only.
 
-  Other data layers, such as AshSqlite, should work for normal type behavior if
-  they support Ash UUID storage. They should not use `migration_default?` unless
-  they provide compatible migration support.
+  For AshSqlite, configure Ecto SQLite binary UUID storage before generating
+  migrations if you want raw 16-byte UUID values in the database:
+
+      config :ecto_sqlite3, :uuid_type, :binary
+
+  Other data layers should work for normal type behavior if they support Ash UUID
+  storage. They should not use `migration_default?` unless they provide
+  compatible migration support.
   """
 
   alias AshPrefixedId.ParsedId

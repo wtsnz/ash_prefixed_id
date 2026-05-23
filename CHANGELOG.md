@@ -13,6 +13,7 @@
 - Configurable PostgreSQL migration default function with `migration_default_function`, including native PostgreSQL 18 `uuidv7()` support.
 - Expanded Phoenix example showing legacy prefixes, global lookup, branded TypeScript IDs, and prefixed route params.
 - ExDoc guide pages for getting started, PostgreSQL UUIDv7, legacy prefixes, API integrations, global lookup, and data-layer support.
+- Verified AshSqlite support with binary UUID storage, relationships, legacy prefixes, and global lookup.
 
 ### Changed
 
