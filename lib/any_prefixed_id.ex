@@ -78,4 +78,10 @@ defmodule AshPrefixedId.AnyPrefixedId do
       Ecto.UUID.bingenerate() |> Ecto.UUID.cast!()
     end)
   end
+
+  def graphql_type(_constraints), do: :id
+
+  def graphql_input_type(_constraints), do: :id
+
+  def typescript_type_name, do: "string"
 end

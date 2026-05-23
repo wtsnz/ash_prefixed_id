@@ -91,6 +91,15 @@ prefixed_id do
 end
 ```
 
+### API Integrations
+
+Generated ObjectId types expose prefixed IDs as GraphQL `ID` values and
+AshTypescript `string` values. Database storage remains native `uuid`; API
+clients see values like `post_CWzLBdFy2f1XhrtesFferY`.
+
+See `examples/prefixed_id_demo` for a Phoenix/AshPostgres spike with GraphQL,
+JSON:API, AshTypescript RPC, and LiveView.
+
 ### Utility Functions
 
 ```elixir

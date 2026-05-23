@@ -5,6 +5,7 @@ defmodule AshPrefixedIdTest do
   alias AshPrefixedId.Test.Domain
   alias AshPrefixedId.Test.Resources.Comment
   alias AshPrefixedId.Test.Resources.Post
+  alias AshPrefixedId.Test.Resources.PostgresPost
   alias AshPrefixedId.Test.Resources.Unrelated
 
   test "it replaces the primary key with an object id" do
@@ -49,6 +50,21 @@ defmodule AshPrefixedIdTest do
     attr = Ash.Resource.Info.attribute(Comment, :post_id)
     assert attr != nil
     assert attr.type == Post.ObjectId
+  end
+
+  test "ObjectId modules expose API boundary types" do
+    assert Post.ObjectId.graphql_type([]) == :id
+    assert Post.ObjectId.graphql_input_type([]) == :id
+    assert Post.ObjectId.typescript_type_name() == "string"
+
+    assert AshPrefixedId.AnyPrefixedId.graphql_type([]) == :id
+    assert AshPrefixedId.AnyPrefixedId.graphql_input_type([]) == :id
+    assert AshPrefixedId.AnyPrefixedId.typescript_type_name() == "string"
+  end
+
+  test "Postgres migration defaults use uuid_generate_v7 when enabled" do
+    assert AshPostgres.DataLayer.Info.migration_defaults(PostgresPost)[:id] ==
+             "fragment(\"uuid_generate_v7()\")"
   end
 
   test "find_resource_for_prefix/2" do

@@ -13,13 +13,15 @@ if Code.ensure_loaded?(AshPostgres.DataLayer) do
 
     alias Spark.Dsl.Transformer
 
+    def after?(_), do: true
+
     def transform(dsl_state) do
       data_layer = Transformer.get_persisted(dsl_state, :data_layer)
 
       dsl_state =
         if data_layer == AshPostgres.DataLayer do
           case AshPrefixedId.Info.prefixed_id_migration_default?(dsl_state) do
-            {:ok, true} ->
+            truthy when truthy in [true, {:ok, true}] ->
               [pk] = Ash.Resource.Info.primary_key(dsl_state)
 
               migration_defaults =
@@ -28,7 +30,12 @@ if Code.ensure_loaded?(AshPostgres.DataLayer) do
                   Transformer.get_option(dsl_state, [:postgres], :migration_defaults) || []
                 )
 
-              Transformer.set_option(dsl_state, [:postgres], :migration_defaults, migration_defaults)
+              Transformer.set_option(
+                dsl_state,
+                [:postgres],
+                :migration_defaults,
+                migration_defaults
+              )
 
             _ ->
               dsl_state

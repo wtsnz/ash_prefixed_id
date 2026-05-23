@@ -64,7 +64,12 @@ defmodule AshPrefixedId.Persisters.DefineType do
 
             @impl Ash.Type
             def cast_input(input, constraints) do
-              AshPrefixedId.Type.cast_input(unquote(uuid_type), unquote(prefix), input, constraints)
+              AshPrefixedId.Type.cast_input(
+                unquote(uuid_type),
+                unquote(prefix),
+                input,
+                constraints
+              )
             end
 
             @impl Ash.Type
@@ -114,6 +119,12 @@ defmodule AshPrefixedId.Persisters.DefineType do
             def generator(constraints) do
               AshPrefixedId.Type.generator(unquote(uuid_type), unquote(prefix), constraints)
             end
+
+            def graphql_type(_constraints), do: :id
+
+            def graphql_input_type(_constraints), do: :id
+
+            def typescript_type_name, do: "string"
           end
         end
       )
