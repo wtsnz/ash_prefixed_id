@@ -67,6 +67,40 @@ defmodule AshPrefixedIdTest do
              "fragment(\"uuid_generate_v7()\")"
   end
 
+  test "parse/1 exposes prefixed ID parts" do
+    uuid = "5d446d08-df6a-404d-a1e5-decc78429b3d"
+    id = AshPrefixedId.to_prefixed_id(uuid, "billing_account")
+
+    assert {:ok,
+            %AshPrefixedId.ParsedId{
+              prefix: "billing_account",
+              uuid: ^uuid,
+              uuid_binary: uuid_binary,
+              slug: slug
+            }} = AshPrefixedId.parse(id)
+
+    assert byte_size(uuid_binary) == 16
+    assert id == "billing_account_#{slug}"
+    assert AshPrefixedId.parse!(id).prefix == "billing_account"
+    assert AshPrefixedId.valid?(id)
+    assert AshPrefixedId.prefix(id) == {:ok, "billing_account"}
+    assert AshPrefixedId.prefix!(id) == "billing_account"
+  end
+
+  test "parse/1 reports invalid ID reasons" do
+    assert AshPrefixedId.parse("not-an-id") == {:error, :missing_separator}
+    assert AshPrefixedId.parse("_abc") == {:error, :empty_prefix}
+    assert AshPrefixedId.parse("user_") == {:error, :empty_suffix}
+    assert AshPrefixedId.parse("user_not_base58!") == {:error, :invalid_suffix}
+    assert AshPrefixedId.parse(123) == {:error, :not_a_string}
+
+    refute AshPrefixedId.valid?("not-an-id")
+
+    assert_raise ArgumentError, ~r/invalid prefixed ID/, fn ->
+      AshPrefixedId.parse!("not-an-id")
+    end
+  end
+
   test "find_resource_for_prefix/2" do
     assert AshPrefixedId.find_resource_for_prefix([Domain], "post") == Post
     assert AshPrefixedId.find_resource_for_prefix([Domain], "florb") == nil

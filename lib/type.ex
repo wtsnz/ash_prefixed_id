@@ -60,8 +60,19 @@ defmodule AshPrefixedId.Type do
     end
   end
 
-  def encode_uuid(binary_uuid, prefix) do
+  def encode_uuid(binary_uuid, prefix)
+      when is_binary(binary_uuid) and byte_size(binary_uuid) == 16 do
     "#{prefix}_#{:base58.binary_to_base58(binary_uuid)}"
+  end
+
+  def encode_uuid(uuid_string, prefix) when is_binary(uuid_string) do
+    case Ecto.UUID.dump(uuid_string) do
+      {:ok, uuid_binary} ->
+        encode_uuid(uuid_binary, prefix)
+
+      :error ->
+        raise ArgumentError, "expected a UUID binary or UUID string, got: #{inspect(uuid_string)}"
+    end
   end
 
   def decode_object_id(input, prefix) do
@@ -73,19 +84,22 @@ defmodule AshPrefixedId.Type do
   end
 
   def decode_object_id(input) when is_binary(input) do
-    case String.split(input, "_") do
-      [prefix, slug] ->
-        case :base58.base58_to_binary(to_charlist(slug)) do
-          uuid when is_binary(uuid) and byte_size(uuid) == 16 -> {:ok, prefix, uuid}
-          _ -> :error
-        end
-
-      _ ->
-        :error
+    case parse_object_id(input) do
+      {:ok, prefix, _slug, uuid} -> {:ok, prefix, uuid}
+      {:error, _reason} -> :error
     end
   end
 
   def decode_object_id(_), do: :error
+
+  def parse_object_id(input) when is_binary(input) do
+    with {:ok, prefix, slug} <- split_object_id(input),
+         {:ok, uuid} <- decode_slug(slug) do
+      {:ok, prefix, slug, uuid}
+    end
+  end
+
+  def parse_object_id(_), do: {:error, :not_a_string}
 
   def generator(uuid_type, prefix, constraints) do
     StreamData.repeatedly(fn ->
@@ -107,5 +121,36 @@ defmodule AshPrefixedId.Type do
         bin
     end
     |> encode_uuid(prefix)
+  end
+
+  defp split_object_id(input) do
+    case :binary.matches(input, "_") do
+      [] ->
+        {:error, :missing_separator}
+
+      matches ->
+        {separator_index, 1} = List.last(matches)
+        prefix = binary_part(input, 0, separator_index)
+
+        slug =
+          binary_part(input, separator_index + 1, byte_size(input) - separator_index - 1)
+
+        cond do
+          prefix == "" -> {:error, :empty_prefix}
+          slug == "" -> {:error, :empty_suffix}
+          true -> {:ok, prefix, slug}
+        end
+    end
+  end
+
+  defp decode_slug(slug) do
+    case :base58.base58_to_binary(to_charlist(slug)) do
+      uuid when is_binary(uuid) and byte_size(uuid) == 16 -> {:ok, uuid}
+      _ -> {:error, :invalid_suffix}
+    end
+  rescue
+    _ -> {:error, :invalid_suffix}
+  catch
+    _, _ -> {:error, :invalid_suffix}
   end
 end

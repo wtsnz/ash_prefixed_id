@@ -103,6 +103,15 @@ JSON:API, AshTypescript RPC, and LiveView.
 ### Utility Functions
 
 ```elixir
+# Parse a prefixed ID into structured parts
+AshPrefixedId.parse("user_CWzLBdFy2f1XhrtesFferY")
+#=> {:ok, %AshPrefixedId.ParsedId{prefix: "user", uuid: "5d446d08-df6a-404d-a1e5-decc78429b3d", ...}}
+
+# Check or extract a prefix
+AshPrefixedId.valid?("user_CWzLBdFy2f1XhrtesFferY")
+AshPrefixedId.prefix("user_CWzLBdFy2f1XhrtesFferY")
+#=> {:ok, "user"}
+
 # Decode a prefixed ID to a UUID string
 AshPrefixedId.decode_object_id("user_CWzLBdFy2f1XhrtesFferY")
 #=> {:ok, "5d446d08-df6a-404d-a1e5-decc78429b3d"}

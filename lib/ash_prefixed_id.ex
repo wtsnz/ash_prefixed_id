@@ -39,7 +39,16 @@ defmodule AshPrefixedId do
       end
   """
 
+  alias AshPrefixedId.ParsedId
   alias AshPrefixedId.Type
+
+  @type parse_error ::
+          :not_a_string
+          | :missing_separator
+          | :empty_prefix
+          | :empty_suffix
+          | :invalid_suffix
+          | :invalid_uuid
 
   @transformers (if Code.ensure_loaded?(AshPostgres.DataLayer) do
                    [
@@ -85,6 +94,77 @@ defmodule AshPrefixedId do
     sections: [@prefixed_id],
     transformers: @transformers,
     persisters: @persisters
+
+  @doc """
+  Parses a prefixed ID into its prefix, encoded slug, and UUID forms.
+
+  ## Examples
+
+      iex> {:ok, parsed} = parse("user_CWzLBdFy2f1XhrtesFferY")
+      iex> parsed.prefix
+      "user"
+      iex> parsed.uuid
+      "5d446d08-df6a-404d-a1e5-decc78429b3d"
+  """
+  @spec parse(term()) :: {:ok, ParsedId.t()} | {:error, parse_error()}
+  def parse(id) do
+    case Type.parse_object_id(id) do
+      {:ok, prefix, slug, uuid_binary} ->
+        case Ecto.UUID.load(uuid_binary) do
+          {:ok, uuid} ->
+            {:ok,
+             %ParsedId{
+               prefix: prefix,
+               slug: slug,
+               uuid: uuid,
+               uuid_binary: uuid_binary
+             }}
+
+          :error ->
+            {:error, :invalid_uuid}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Parses a prefixed ID or raises `ArgumentError`.
+  """
+  @spec parse!(term()) :: ParsedId.t()
+  def parse!(id) do
+    case parse(id) do
+      {:ok, parsed} ->
+        parsed
+
+      {:error, reason} ->
+        raise ArgumentError, "invalid prefixed ID (#{reason}): #{inspect(id)}"
+    end
+  end
+
+  @doc """
+  Returns true when the value is a syntactically valid prefixed ID.
+  """
+  @spec valid?(term()) :: boolean()
+  def valid?(id), do: match?({:ok, _parsed}, parse(id))
+
+  @doc """
+  Extracts the prefix from a prefixed ID.
+  """
+  @spec prefix(term()) :: {:ok, String.t()} | {:error, parse_error()}
+  def prefix(id) do
+    case parse(id) do
+      {:ok, %ParsedId{prefix: prefix}} -> {:ok, prefix}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Extracts the prefix from a prefixed ID or raises `ArgumentError`.
+  """
+  @spec prefix!(term()) :: String.t()
+  def prefix!(id), do: parse!(id).prefix
 
   @doc """
   Decodes the given prefixed ID into a string version of the UUID.

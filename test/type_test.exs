@@ -3,6 +3,20 @@ defmodule AshPrefixedId.TypeTest do
 
   alias AshPrefixedId.Type
 
+  test "parse_object_id supports prefixes containing underscores" do
+    uuid = Ecto.UUID.bingenerate()
+    id = Type.encode_uuid(uuid, "billing_account")
+
+    assert {:ok, "billing_account", slug, ^uuid} = Type.parse_object_id(id)
+    assert id == "billing_account_#{slug}"
+    assert {:ok, "billing_account", ^uuid} = Type.decode_object_id(id)
+  end
+
+  test "encode_uuid accepts UUID strings" do
+    uuid = "5d446d08-df6a-404d-a1e5-decc78429b3d"
+    assert "user_" <> _ = Type.encode_uuid(uuid, "user")
+  end
+
   for type <- [Ash.Type.UUID, Ash.Type.UUIDv7] do
     test "cast_input with #{inspect(type)}" do
       assert {:ok, nil} = Type.cast_input(unquote(type), "user", nil, [])
