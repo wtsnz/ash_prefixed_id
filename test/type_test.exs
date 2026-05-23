@@ -72,12 +72,15 @@ defmodule AshPrefixedId.TypeTest do
       id2 = Type.generate(unquote(type), "user", [])
       refute Type.equal?("user", id, id2)
 
-      # same UUID with different prefixes should still be equal
-      # (both decode to the same underlying UUID binary)
+      # same UUID with different resource prefixes should not be equal
       id_user = Type.generate(unquote(type), "user", [])
       "user_" <> slug = id_user
       id_post = "post_" <> slug
-      assert Type.equal?("user", id_user, id_post)
+      refute Type.equal?("user", id_user, id_post)
+
+      # legacy prefixes are equal when explicitly accepted
+      id_old_user = "old_user_" <> slug
+      assert Type.equal?(["user", "old_user"], id_user, id_old_user)
     end
   end
 
@@ -117,5 +120,16 @@ defmodule AshPrefixedId.TypeTest do
     assert Post.ObjectId.equal?(id1, id1)
     id2 = Post.ObjectId.generator([]) |> Enum.take(1) |> hd()
     refute Post.ObjectId.equal?(id1, id2)
+
+    "post_" <> slug = id1
+    refute Post.ObjectId.equal?(id1, "comment_#{slug}")
+  end
+
+  test "generated ObjectId equal?/2 allows legacy prefixes" do
+    alias AshPrefixedId.Test.Resources.LegacyArticle
+
+    "article_" <> slug = id = LegacyArticle.ObjectId.generator([]) |> Enum.take(1) |> hd()
+
+    assert LegacyArticle.ObjectId.equal?(id, "old_article_#{slug}")
   end
 end

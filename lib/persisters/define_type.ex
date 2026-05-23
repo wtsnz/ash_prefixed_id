@@ -116,7 +116,7 @@ defmodule AshPrefixedId.Persisters.DefineType do
 
             @impl Ash.Type
             def equal?(term1, term2) do
-              AshPrefixedId.Type.equal?(unquote(prefix), term1, term2)
+              AshPrefixedId.Type.equal?(unquote(accepted_prefixes), term1, term2)
             end
 
             @impl Ash.Type

@@ -53,9 +53,13 @@ defmodule AshPrefixedId.Type do
   def equal?(_, nil, _), do: false
   def equal?(_, _, nil), do: false
 
-  def equal?(_prefix, term1, term2) do
-    with {:ok, _, uuid1} <- decode_object_id(term1),
-         {:ok, _, uuid2} <- decode_object_id(term2) do
+  def equal?(prefixes, term1, term2) do
+    prefixes = List.wrap(prefixes)
+
+    with {:ok, prefix1, uuid1} <- decode_object_id(term1),
+         true <- prefix1 in prefixes,
+         {:ok, prefix2, uuid2} <- decode_object_id(term2),
+         true <- prefix2 in prefixes do
       uuid1 == uuid2
     else
       _ -> false
