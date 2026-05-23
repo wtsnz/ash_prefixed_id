@@ -108,6 +108,16 @@ prefixed_id do
 end
 ```
 
+On PostgreSQL 18+, use the native `uuidv7()` function instead:
+
+```elixir
+prefixed_id do
+  prefix "post"
+  migration_default? true
+  migration_default_function "uuidv7()"
+end
+```
+
 ### API Integrations
 
 Generated ObjectId types expose prefixed IDs as GraphQL `ID` values and

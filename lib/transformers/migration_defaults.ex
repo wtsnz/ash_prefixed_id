@@ -23,9 +23,10 @@ if Code.ensure_loaded?(AshPostgres.DataLayer) do
           case AshPrefixedId.Info.prefixed_id_migration_default?(dsl_state) do
             truthy when truthy in [true, {:ok, true}] ->
               [pk] = Ash.Resource.Info.primary_key(dsl_state)
+              function = AshPrefixedId.Info.prefixed_id_migration_default_function!(dsl_state)
 
               migration_defaults =
-                [{pk, "fragment(\"uuid_generate_v7()\")"}]
+                [{pk, "fragment(#{inspect(function)})"}]
                 |> Keyword.merge(
                   Transformer.get_option(dsl_state, [:postgres], :migration_defaults) || []
                 )

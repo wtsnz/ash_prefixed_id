@@ -6,6 +6,7 @@ defmodule AshPrefixedIdTest do
   alias AshPrefixedId.Test.Resources.Comment
   alias AshPrefixedId.Test.Resources.LegacyArticle
   alias AshPrefixedId.Test.Resources.Post
+  alias AshPrefixedId.Test.Resources.PostgresNativePost
   alias AshPrefixedId.Test.Resources.PostgresPost
   alias AshPrefixedId.Test.Resources.Unrelated
 
@@ -69,6 +70,11 @@ defmodule AshPrefixedIdTest do
   test "Postgres migration defaults use uuid_generate_v7 when enabled" do
     assert AshPostgres.DataLayer.Info.migration_defaults(PostgresPost)[:id] ==
              "fragment(\"uuid_generate_v7()\")"
+  end
+
+  test "Postgres migration defaults can use native PostgreSQL uuidv7" do
+    assert AshPostgres.DataLayer.Info.migration_defaults(PostgresNativePost)[:id] ==
+             "fragment(\"uuidv7()\")"
   end
 
   test "parse/1 exposes prefixed ID parts" do

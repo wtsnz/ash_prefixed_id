@@ -1,5 +1,6 @@
 spark_locals_without_parens = [
   legacy_prefixes: 1,
+  migration_default_function: 1,
   prefix: 1
 ]
 
