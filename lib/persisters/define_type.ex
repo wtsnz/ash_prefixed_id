@@ -171,28 +171,38 @@ defmodule AshPrefixedId.Persisters.DefineType do
   defp maybe_define_phoenix_param(dsl, module, primary_key) do
     case AshPrefixedId.Info.prefixed_id_phoenix_param?(dsl) do
       value when value in [true, {:ok, true}] ->
+        ensure_phoenix_param!(module)
+
         Spark.Dsl.Transformer.eval(
           dsl,
           [module: module, primary_key: primary_key],
           quote do
-            case Code.ensure_compiled(Phoenix.Param) do
-              {:module, Phoenix.Param} ->
-                defimpl Phoenix.Param, for: unquote(module) do
-                  def to_param(resource) do
-                    resource
-                    |> Map.fetch!(unquote(primary_key))
-                    |> to_string()
-                  end
-                end
-
-              _ ->
-                :ok
+            defimpl Phoenix.Param, for: unquote(module) do
+              def to_param(resource) do
+                resource
+                |> Map.fetch!(unquote(primary_key))
+                |> to_string()
+              end
             end
           end
         )
 
       _ ->
         dsl
+    end
+  end
+
+  defp ensure_phoenix_param!(module) do
+    case Code.ensure_compiled(Phoenix.Param) do
+      {:module, Phoenix.Param} ->
+        :ok
+
+      {:error, reason} ->
+        raise Spark.Error.DslError,
+          module: module,
+          path: [:prefixed_id, :phoenix_param?],
+          message:
+            "phoenix_param? requires Phoenix.Param to be available at resource compile time, got #{inspect(reason)}"
     end
   end
 

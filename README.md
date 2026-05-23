@@ -152,6 +152,8 @@ end
 
 When Phoenix is available, this implements `Phoenix.Param` for the resource and
 returns the prefixed primary key from route helpers.
+If `phoenix_param?` is enabled, `Phoenix.Param` must be available when the
+resource compiles.
 
 See `examples/prefixed_id_demo` for a Phoenix/AshPostgres spike with GraphQL,
 JSON:API, AshTypescript RPC, and LiveView.
