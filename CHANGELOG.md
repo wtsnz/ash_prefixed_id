@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0
+
+### Added
+
+- Structured parsing helpers: `parse/1`, `parse!/1`, `valid?/1`, `prefix/1`, and `prefix!/1`.
+- Compile-time TypeID-style prefix validation.
+- `legacy_prefixes` for accepting old external ID prefixes while generating the current prefix.
+- Optional branded AshTypescript ObjectId strings with `typescript_brand?`.
+- Global resource and record lookup helpers: `resources_for_prefix/2`, `resource/2`, `resource!/2`, `get/3`, and `get!/3`.
+- Optional Phoenix route parameter support with `phoenix_param?`.
+- Configurable PostgreSQL migration default function with `migration_default_function`, including native PostgreSQL 18 `uuidv7()` support.
+- Expanded Phoenix example showing legacy prefixes, global lookup, branded TypeScript IDs, and prefixed route params.
+
+### Changed
+
+- Prefix decoding now supports prefixes containing underscores.
+- Package metadata now points at the `wtsnz/ash_prefixed_id` repository.
+
 ## 0.1.1
 
 ### Changed
