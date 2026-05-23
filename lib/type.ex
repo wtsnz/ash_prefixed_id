@@ -134,6 +134,17 @@ defmodule AshPrefixedId.Type do
     |> encode_uuid(prefix)
   end
 
+  def typescript_type_name(_prefixes, false), do: "string"
+
+  def typescript_type_name(prefixes, true) do
+    brand =
+      prefixes
+      |> List.wrap()
+      |> Enum.map_join(" | ", &inspect/1)
+
+    "string & { readonly __prefix: #{brand} }"
+  end
+
   defp split_object_id(input) do
     case :binary.matches(input, "_") do
       [] ->

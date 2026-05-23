@@ -5,6 +5,20 @@ defmodule AshPrefixedId.Persisters.DefineType do
   def transform(dsl) do
     prefix = AshPrefixedId.Info.prefixed_id_prefix!(dsl)
     accepted_prefixes = [prefix | AshPrefixedId.Info.prefixed_id_legacy_prefixes!(dsl)]
+
+    typescript_brand? =
+      case AshPrefixedId.Info.prefixed_id_typescript_brand?(dsl) do
+        {:ok, value} when is_boolean(value) -> value
+        value when is_boolean(value) -> value
+        _ -> false
+      end
+
+    typescript_type_name =
+      AshPrefixedId.Type.typescript_type_name(
+        accepted_prefixes,
+        typescript_brand?
+      )
+
     module = Spark.Dsl.Transformer.get_persisted(dsl, :module)
 
     {dsl, uuid_type} =
@@ -55,7 +69,8 @@ defmodule AshPrefixedId.Persisters.DefineType do
         [
           uuid_type: uuid_type,
           prefix: prefix,
-          accepted_prefixes: accepted_prefixes
+          accepted_prefixes: accepted_prefixes,
+          typescript_type_name: typescript_type_name
         ],
         quote do
           defmodule ObjectId do
@@ -126,7 +141,7 @@ defmodule AshPrefixedId.Persisters.DefineType do
 
             def graphql_input_type(_constraints), do: :id
 
-            def typescript_type_name, do: "string"
+            def typescript_type_name, do: unquote(typescript_type_name)
           end
         end
       )

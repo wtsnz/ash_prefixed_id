@@ -94,6 +94,12 @@ defmodule AshPrefixedId do
         doc:
           "When true, adds `uuid_generate_v7()` as the PostgreSQL migration default for the primary key. Requires `AshPrefixedId.PostgresExtension` to be installed.",
         default: false
+      ],
+      typescript_brand?: [
+        type: :boolean,
+        doc:
+          "When true, generated ObjectId types expose a branded TypeScript string instead of plain `string`.",
+        default: false
       ]
     ]
   }

@@ -9,6 +9,7 @@ defmodule AshPrefixedId.Test.Resources.LegacyArticle do
   prefixed_id do
     prefix "article"
     legacy_prefixes ["old_article"]
+    typescript_brand?(true)
   end
 
   ets do

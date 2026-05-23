@@ -58,6 +58,9 @@ defmodule AshPrefixedIdTest do
     assert Post.ObjectId.graphql_input_type([]) == :id
     assert Post.ObjectId.typescript_type_name() == "string"
 
+    assert LegacyArticle.ObjectId.typescript_type_name() ==
+             ~s(string & { readonly __prefix: "article" | "old_article" })
+
     assert AshPrefixedId.AnyPrefixedId.graphql_type([]) == :id
     assert AshPrefixedId.AnyPrefixedId.graphql_input_type([]) == :id
     assert AshPrefixedId.AnyPrefixedId.typescript_type_name() == "string"

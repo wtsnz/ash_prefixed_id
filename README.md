@@ -114,6 +114,18 @@ Generated ObjectId types expose prefixed IDs as GraphQL `ID` values and
 AshTypescript `string` values. Database storage remains native `uuid`; API
 clients see values like `post_CWzLBdFy2f1XhrtesFferY`.
 
+For stricter TypeScript clients, opt into branded strings per resource:
+
+```elixir
+prefixed_id do
+  prefix "account"
+  typescript_brand? true
+end
+```
+
+AshTypescript will see `string & { readonly __prefix: "account" }` for that
+ObjectId type.
+
 See `examples/prefixed_id_demo` for a Phoenix/AshPostgres spike with GraphQL,
 JSON:API, AshTypescript RPC, and LiveView.
 
