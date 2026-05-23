@@ -22,6 +22,7 @@ defmodule PrefixedIdDemoWeb.Router do
     pipe_through :browser
 
     live "/", CatalogLive, :index
+    live "/todos/:id", TodoLive, :show
   end
 
   scope "/gql" do

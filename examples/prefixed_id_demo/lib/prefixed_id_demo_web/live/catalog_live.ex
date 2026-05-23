@@ -9,7 +9,13 @@ defmodule PrefixedIdDemoWeb.CatalogLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign_catalog(socket)}
+    socket =
+      socket
+      |> assign(resolver_id: "", resolver_result: nil, resolver_error: nil)
+      |> assign_catalog()
+      |> assign_default_resolver()
+
+    {:ok, socket}
   end
 
   @impl true
@@ -22,6 +28,15 @@ defmodule PrefixedIdDemoWeb.CatalogLive do
       |> assign_catalog()
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("resolve_id", %{"resolver" => %{"id" => id}}, socket) do
+    {:noreply, resolve_prefixed_id(socket, id)}
+  end
+
+  def handle_event("resolve_id", %{"id" => id}, socket) do
+    {:noreply, resolve_prefixed_id(socket, id)}
   end
 
   defp assign_catalog(socket) do
@@ -47,12 +62,45 @@ defmodule PrefixedIdDemoWeb.CatalogLive do
       teams: teams,
       projects: projects,
       todos: todos,
-      domain: inspect(Catalog)
+      domain: inspect(Catalog),
+      sample_legacy_todo_id: todos |> List.first() |> legacy_todo_id()
     )
+  end
+
+  defp assign_default_resolver(%{assigns: %{sample_legacy_todo_id: nil}} = socket), do: socket
+
+  defp assign_default_resolver(%{assigns: %{resolver_id: resolver_id}} = socket)
+       when resolver_id not in [nil, ""] do
+    socket
+  end
+
+  defp assign_default_resolver(%{assigns: %{sample_legacy_todo_id: id}} = socket) do
+    resolve_prefixed_id(socket, id)
+  end
+
+  defp resolve_prefixed_id(socket, id) do
+    id = String.trim(id || "")
+
+    socket = assign(socket, resolver_id: id)
+
+    if id == "" do
+      assign(socket, resolver_result: nil, resolver_error: "Enter a prefixed ID.")
+    else
+      case AshPrefixedId.get([Catalog], id) do
+        {:ok, record} ->
+          assign(socket, resolver_result: describe_record(record, id), resolver_error: nil)
+
+        {:error, error} ->
+          assign(socket, resolver_result: nil, resolver_error: inspect(error))
+      end
+    end
   end
 
   defp raw_uuid(nil), do: nil
   defp raw_uuid(id), do: AshPrefixedId.to_uuid_string!(id)
+
+  defp legacy_todo_id(nil), do: nil
+  defp legacy_todo_id(%Todo{id: "todo_" <> slug}), do: "task_#{slug}"
 
   defp prefix(id) do
     id
@@ -125,7 +173,22 @@ defmodule PrefixedIdDemoWeb.CatalogLive do
                         {todo.project.name} / {todo.project.team.name}
                       </div>
                     </td>
-                    <td class="px-4 py-4 font-mono text-xs text-cyan-200">{todo.id}</td>
+                    <td class="px-4 py-4">
+                      <.link
+                        navigate={~p"/todos/#{todo}"}
+                        class="break-all font-mono text-xs text-cyan-200 transition hover:text-cyan-100"
+                      >
+                        {todo.id}
+                      </.link>
+                      <button
+                        type="button"
+                        phx-click="resolve_id"
+                        phx-value-id={legacy_todo_id(todo)}
+                        class="mt-2 block break-all text-left font-mono text-xs text-zinc-500 transition hover:text-zinc-300"
+                      >
+                        legacy {legacy_todo_id(todo)}
+                      </button>
+                    </td>
                     <td class="px-4 py-4 font-mono text-xs text-amber-200">{todo.project_id}</td>
                     <td class="px-4 py-4 font-mono text-xs text-emerald-200">
                       {todo.project.team_id}
@@ -137,21 +200,79 @@ defmodule PrefixedIdDemoWeb.CatalogLive do
             </div>
           </div>
 
-          <aside class="rounded-lg border border-zinc-800 bg-zinc-900/70 p-4">
-            <h2 class="text-sm font-semibold text-white">API proof points</h2>
-            <div class="mt-4 space-y-4 text-sm">
-              <.proof label="GraphQL" path="/gql/playground" text="listTodos, getTodo, createTodo" />
-              <.proof
-                label="JSON:API"
-                path="/api/json/catalog/todos"
-                text="type=todo, relationships by prefixed FK"
-              />
-              <.proof label="TypeScript" path="/rpc/run" text="generated assets/js/ash_rpc.ts" />
-              <.proof
-                label="Storage"
-                path="Postgres uuid"
-                text="IDs render prefixed; columns stay uuid"
-              />
+          <aside class="space-y-6">
+            <div class="rounded-lg border border-zinc-800 bg-zinc-900/70 p-4">
+              <h2 class="text-sm font-semibold text-white">Global resolver</h2>
+              <p class="mt-1 text-xs leading-5 text-zinc-500">
+                Uses AshPrefixedId.get/3 across the Catalog domain.
+              </p>
+
+              <.form
+                for={%{}}
+                as={:resolver}
+                id="id-resolver"
+                phx-submit="resolve_id"
+                class="mt-4 space-y-3"
+              >
+                <input
+                  type="text"
+                  name="resolver[id]"
+                  value={@resolver_id}
+                  class="min-h-11 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 font-mono text-xs text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-cyan-300"
+                  placeholder="todo_..., task_..., proj_..., team_..."
+                />
+                <button
+                  type="submit"
+                  class="inline-flex min-h-10 w-full items-center justify-center rounded-md bg-cyan-300 px-3 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-200"
+                >
+                  Resolve ID
+                </button>
+              </.form>
+
+              <div :if={@resolver_result} class="mt-4 border-l border-cyan-300 pl-3">
+                <div class="text-xs font-semibold uppercase tracking-wide text-cyan-200">
+                  {@resolver_result.type}
+                </div>
+                <div class="mt-1 text-sm font-medium text-white">{@resolver_result.label}</div>
+                <div class="mt-2 break-all font-mono text-xs text-zinc-400">
+                  requested {@resolver_result.requested_id}
+                </div>
+                <div class="mt-1 break-all font-mono text-xs text-cyan-200">
+                  canonical {@resolver_result.id}
+                </div>
+              </div>
+
+              <div :if={@resolver_error} class="mt-4 border-l border-rose-500 pl-3">
+                <div class="text-xs font-semibold uppercase tracking-wide text-rose-200">
+                  Resolver error
+                </div>
+                <div class="mt-1 break-all font-mono text-xs text-rose-100">
+                  {@resolver_error}
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-lg border border-zinc-800 bg-zinc-900/70 p-4">
+              <h2 class="text-sm font-semibold text-white">API proof points</h2>
+              <div class="mt-4 space-y-4 text-sm">
+                <.proof label="GraphQL" path="/gql/playground" text="listTodos, getTodo, createTodo" />
+                <.proof
+                  label="JSON:API"
+                  path="/api/json/catalog/todos"
+                  text="type=todo, relationships by prefixed FK"
+                />
+                <.proof label="TypeScript" path="/rpc/run" text="Todo IDs are branded strings" />
+                <.proof
+                  label="Routes"
+                  path="/todos/:id"
+                  text="Phoenix.Param emits prefixed todo IDs"
+                />
+                <.proof
+                  label="Storage"
+                  path="Postgres uuid"
+                  text="IDs render prefixed; columns stay uuid"
+                />
+              </div>
             </div>
           </aside>
         </section>
@@ -216,5 +337,22 @@ defmodule PrefixedIdDemoWeb.CatalogLive do
       </div>
     </div>
     """
+  end
+
+  defp describe_record(%Team{} = team, requested_id) do
+    %{type: "Team", label: team.name, id: team.id, requested_id: requested_id}
+  end
+
+  defp describe_record(%Project{} = project, requested_id) do
+    %{type: "Project", label: project.name, id: project.id, requested_id: requested_id}
+  end
+
+  defp describe_record(%Todo{} = todo, requested_id) do
+    %{
+      type: "Todo",
+      label: todo.title,
+      id: todo.id,
+      requested_id: requested_id
+    }
   end
 end

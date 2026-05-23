@@ -59,7 +59,7 @@ export type TeamAttributesOnlySchema = {
 export type TodoResourceSchema = {
   __type: "Resource";
   __primitiveFields: "id" | "title" | "done" | "insertedAt" | "updatedAt" | "projectId";
-  id: string;
+  id: string & { readonly __prefix: "todo" | "task" };
   title: string;
   done: boolean | null;
   insertedAt: UtcDateTimeUsec;
@@ -73,7 +73,7 @@ export type TodoResourceSchema = {
 export type TodoAttributesOnlySchema = {
   __type: "Resource";
   __primitiveFields: "id" | "title" | "done" | "insertedAt" | "updatedAt" | "projectId";
-  id: string;
+  id: string & { readonly __prefix: "todo" | "task" };
   title: string;
   done: boolean | null;
   insertedAt: UtcDateTimeUsec;
@@ -178,9 +178,9 @@ export type TodoFilterInput = {
   not?: Array<TodoFilterInput>;
 
   id?: {
-    eq?: string;
-    notEq?: string;
-    in?: Array<string>;
+    eq?: string & { readonly __prefix: "todo" | "task" };
+    notEq?: string & { readonly __prefix: "todo" | "task" };
+    in?: Array<string & { readonly __prefix: "todo" | "task" }>;
   };
 
   title?: {

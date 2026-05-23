@@ -13,6 +13,10 @@ Phoenix spike for `ash_prefixed_id` across current Ash ecosystem packages:
 
 - `Team`, `Project`, and `Todo` are Ash resources backed by Postgres.
 - IDs render as `team_*`, `proj_*`, and `todo_*`.
+- `Todo` also accepts the legacy `task_*` prefix.
+- `Todo` implements `Phoenix.Param`, so `/todos/:id` routes use prefixed IDs.
+- Generated AshTypescript types brand `Todo.id` as `"todo" | "task"`.
+- The LiveView resolver uses `AshPrefixedId.get/3` to look up any allowed domain resource by ID.
 - Postgres stores native `uuid` columns and foreign keys.
 - Primary keys default to `uuid_generate_v7()` in generated migrations.
 - GraphQL, JSON:API, AshTypescript RPC, and LiveView all use the same resources.
@@ -37,6 +41,7 @@ PORT=4107 PGPORT=55432 mix phx.server
 Open:
 
 - LiveView: http://localhost:4107
+- Todo route: http://localhost:4107/todos/<todo_id>
 - GraphQL playground: http://localhost:4107/gql/playground
 - JSON:API todos: http://localhost:4107/api/json/catalog/todos
 
@@ -65,6 +70,16 @@ AshTypescript generated client from Node:
 
 ```sh
 node --experimental-strip-types --input-type=module -e 'import { listTodos } from "./assets/js/ash_rpc.ts"; const customFetch = (input, init) => fetch(new URL(input, "http://localhost:4107"), init); console.log(await listTodos({ fields: ["id", "title", "projectId", { project: ["id", "teamId", { team: ["id", "name"] }] }], customFetch }));'
+```
+
+Legacy prefix and global lookup:
+
+```sh
+TODO_ID=$(curl -fsS http://localhost:4107/api/json/catalog/todos -H 'accept: application/vnd.api+json' | ruby -rjson -e 'puts JSON.parse(STDIN.read).fetch("data").first.fetch("id")')
+TASK_ID=${TODO_ID/todo_/task_}
+
+echo "Paste $TASK_ID into the LiveView resolver at http://localhost:4107"
+open "http://localhost:4107/todos/$TODO_ID"
 ```
 
 Postgres storage check:

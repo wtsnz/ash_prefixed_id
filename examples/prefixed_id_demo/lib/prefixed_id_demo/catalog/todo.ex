@@ -11,7 +11,10 @@ defmodule PrefixedIdDemo.Catalog.Todo do
 
   prefixed_id do
     prefix("todo")
+    legacy_prefixes(["task"])
     migration_default?(true)
+    typescript_brand?(true)
+    phoenix_param?(true)
   end
 
   graphql do
