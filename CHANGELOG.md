@@ -45,7 +45,7 @@ Forked from [ash_object_ids](https://github.com/drtheuns/ash_object_ids) and ren
 - `find_duplicate_prefixes/1` and `map_prefixes_to_resources/1` for prefix management
 - `PostgresExtension` with `uuid_generate_v7()` for server-side UUIDv7 generation
 - `migration_default?` option for automatic PostgreSQL migration defaults
-- Automatic `belongs_to` foreign key type inference via `BelongsToAttribute` transformer
+- Automatic `belongs_to` foreign key type inference
 
 ### Changed
 

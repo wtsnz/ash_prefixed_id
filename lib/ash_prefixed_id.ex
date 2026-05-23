@@ -59,13 +59,11 @@ defmodule AshPrefixedId do
   @transformers (if Code.ensure_loaded?(AshPostgres.DataLayer) do
                    [
                      AshPrefixedId.Transformers.ValidatePrefix,
-                     AshPrefixedId.Transformers.BelongsToAttribute,
                      AshPrefixedId.Transformers.MigrationDefaults
                    ]
                  else
                    [
-                     AshPrefixedId.Transformers.ValidatePrefix,
-                     AshPrefixedId.Transformers.BelongsToAttribute
+                     AshPrefixedId.Transformers.ValidatePrefix
                    ]
                  end)
 

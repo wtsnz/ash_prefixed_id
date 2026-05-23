@@ -46,7 +46,7 @@ defmodule AshPrefixedIdTest do
     assert "c_" <> _ = comment.id
   end
 
-  test "BelongsToAttribute auto-creates FK with ObjectId type" do
+  test "belongs_to relationships auto-create FK with ObjectId type" do
     # Comment.post_id should be auto-created as Post.ObjectId
     # (no manual attribute_type: needed)
     attr = Ash.Resource.Info.attribute(Comment, :post_id)
