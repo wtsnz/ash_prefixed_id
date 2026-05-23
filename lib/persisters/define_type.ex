@@ -129,7 +129,12 @@ defmodule AshPrefixedId.Persisters.DefineType do
 
             @impl Ash.Type
             def cast_atomic(new_value, constraints) do
-              unquote(uuid_type).cast_atomic(new_value, constraints)
+              AshPrefixedId.Type.cast_atomic(
+                unquote(uuid_type),
+                unquote(accepted_prefixes),
+                new_value,
+                constraints
+              )
             end
 
             @impl Ash.Type

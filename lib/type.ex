@@ -1,13 +1,15 @@
 defmodule AshPrefixedId.Type do
   @moduledoc false
 
-  def cast_input(_uuid_type, _prefix, nil, _constraints), do: {:ok, nil}
+  def cast_input(_uuid_type, _prefixes, nil, _constraints), do: {:ok, nil}
 
-  def cast_input(uuid_type, prefix, input, constraints) do
-    with {:ok, uuid_bin} <- decode_object_id(input, prefix),
+  def cast_input(uuid_type, prefixes, input, constraints) do
+    primary_prefix = primary_prefix(prefixes)
+
+    with {:ok, uuid_bin} <- decode_object_id(input, prefixes),
          {:ok, uuid_str} <- Ecto.UUID.load(uuid_bin),
          {:ok, _uuid} <- uuid_type.cast_input(uuid_str, constraints) do
-      {:ok, input}
+      {:ok, encode_uuid(uuid_bin, primary_prefix)}
     end
   end
 
@@ -144,6 +146,19 @@ defmodule AshPrefixedId.Type do
 
     "string & { readonly __prefix: #{brand} }"
   end
+
+  def cast_atomic(uuid_type, prefixes, new_value, constraints) do
+    if Ash.Expr.expr?(new_value) do
+      uuid_type.cast_atomic(new_value, constraints)
+    else
+      with {:ok, canonical_id} <- cast_input(uuid_type, prefixes, new_value, constraints) do
+        uuid_type.cast_atomic(canonical_id, constraints)
+      end
+    end
+  end
+
+  defp primary_prefix([prefix | _]), do: prefix
+  defp primary_prefix(prefix), do: prefix
 
   defp split_object_id(input) do
     case :binary.matches(input, "_") do

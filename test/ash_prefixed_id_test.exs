@@ -228,9 +228,22 @@ defmodule AshPrefixedIdTest do
     "article_" <> slug = id = LegacyArticle.ObjectId.generator([]) |> Enum.take(1) |> hd()
     legacy_id = "old_article_#{slug}"
 
-    assert {:ok, ^legacy_id} = LegacyArticle.ObjectId.cast_input(legacy_id, [])
+    assert {:ok, ^id} = LegacyArticle.ObjectId.cast_input(legacy_id, [])
     assert {:ok, uuid_binary} = LegacyArticle.ObjectId.dump_to_native(legacy_id, [])
     assert {:ok, ^id} = LegacyArticle.ObjectId.cast_stored(uuid_binary, [])
+  end
+
+  test "legacy prefixes are canonicalized for primary key lookups" do
+    article =
+      LegacyArticle
+      |> Ash.Changeset.for_create(:create, %{title: "Legacy lookup"})
+      |> Ash.create!()
+
+    "article_" <> slug = article.id
+    legacy_id = "old_article_#{slug}"
+
+    assert {:ok, fetched} = Ash.get(LegacyArticle, legacy_id)
+    assert fetched.id == article.id
   end
 
   test "find_duplicate_prefixes" do

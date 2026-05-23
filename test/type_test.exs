@@ -28,6 +28,14 @@ defmodule AshPrefixedId.TypeTest do
                Type.cast_input(unquote(type), "post", "user_CWzLBdFy2f1XhrtesFferY", [])
     end
 
+    test "cast_input canonicalizes legacy prefixes with #{inspect(type)}" do
+      id = Type.generate(unquote(type), "user", [])
+      "user_" <> slug = id
+
+      assert {:ok, ^id} =
+               Type.cast_input(unquote(type), ["user", "old_user"], "old_user_#{slug}", [])
+    end
+
     test "cast_stored with #{inspect(type)}" do
       assert {:ok, nil} = Type.cast_stored(unquote(type), "user", nil, [])
       id = unquote(type).generator([]) |> Enum.take(1) |> hd()
