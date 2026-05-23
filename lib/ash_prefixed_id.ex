@@ -2,41 +2,140 @@ defmodule AshPrefixedId do
   @moduledoc """
   An extension for working with prefixed IDs.
 
-  Prefixed IDs are identifiers that are prefixed with the resource they identify.
-  A more detailed explanation can be found in the ["Designing APIs for
-  humans"](https://dev.to/stripe/designing-apis-for-humans-object-ids-3o5a) blog post.
+  Prefixed IDs are external identifiers that include a short resource prefix,
+  for example `user_CWzLBdFy2f1XhrtesFferY`. They are easier to inspect in logs,
+  API payloads, URLs, support tickets, and dashboards than bare UUIDs. A more
+  detailed explanation of the API design pattern is available in Stripe's
+  ["Designing APIs for humans"](https://dev.to/stripe/designing-apis-for-humans-object-ids-3o5a).
 
-  This library provides an implementation for Ash:
+  `AshPrefixedId` keeps database storage native. Primary and foreign keys remain
+  UUID values in the data layer, while Ash resources and API clients see prefixed
+  strings.
+
+  ## Resource Setup
 
       defmodule App.Blog.Post do
         use Ash.Resource,
           domain: App.Blog,
-          data_layer: Ash.DataLayer.AshPostgres,
+          data_layer: AshPostgres.DataLayer,
           extensions: [AshPrefixedId]
 
         prefixed_id do
-          prefix "p"
+          prefix "post"
         end
 
         attributes do
           uuid_primary_key(:id)
-          # ... other attributes
+          attribute(:title, :string, public?: true)
         end
       end
 
-  `AshPrefixedId` replaces the `:id` primary key with a prefixed ID (prefixed by "p").
-  The underlying UUID implementation will be used, so it works with both UUID
-  and UUIDv7. The IDs are stored as regular UUIDs in the database. Externally,
-  the UUIDs are encoded as "{prefix}_{base58(uuid)}".
+  The primary key must use `uuid_primary_key/2` or `uuid_v7_primary_key/2`.
+  Custom UUID-like primary key types are intentionally rejected until they can be
+  supported with clear casting and dumping semantics.
 
-  Each resource will have a generated `<resource>.ObjectId` module which is the
-  `Ash.Type` for that ID. Foreign key attributes for `belongs_to` relationships
-  are automatically created with the correct ObjectId type:
+  The configured prefix is validated at compile time. Prefixes must:
+
+  - contain only lowercase ASCII letters and underscores
+  - start and end with a lowercase ASCII letter
+  - be no longer than 63 characters
+
+  Each resource gets a generated `<resource>.ObjectId` Ash type. For the module
+  above, `App.Blog.Post.ObjectId` stores as `:uuid`, casts external
+  `post_...` strings, and renders stored UUIDs back as `post_...`.
+
+  ## Relationships
+
+  Foreign key attributes for `belongs_to` relationships pointing at resources
+  that use this extension are automatically rewritten to the destination
+  resource's ObjectId type:
 
       relationships do
         belongs_to :post, App.Blog.Post
-        # post_id attribute is auto-created as App.Blog.Post.ObjectId
+        # post_id is auto-created as App.Blog.Post.ObjectId
       end
+
+  This keeps relationship inputs and API payloads using prefixed IDs while the
+  database still stores UUID foreign keys.
+
+  ## Legacy Prefixes
+
+  Use `legacy_prefixes` when a resource has been renamed or an API prefix needs
+  to change without breaking existing clients:
+
+      prefixed_id do
+        prefix "account"
+        legacy_prefixes ["user"]
+      end
+
+  New values generate as `account_...`. Incoming `user_...` values are accepted
+  and canonicalized back to `account_...` at the Ash type boundary.
+
+  ## PostgreSQL Defaults
+
+  With AshPostgres, `migration_default? true` adds a database-side UUIDv7
+  default for the primary key in generated migrations:
+
+      prefixed_id do
+        prefix "post"
+        migration_default? true
+      end
+
+  The default function is `uuid_generate_v7()`, provided by
+  `AshPrefixedId.PostgresExtension`. PostgreSQL 18 users can use the native
+  function instead:
+
+      prefixed_id do
+        prefix "post"
+        migration_default? true
+        migration_default_function "uuidv7()"
+      end
+
+  `migration_default_function` must be a zero-arity PostgreSQL function name,
+  such as `uuidv7()` or `extensions.uuidv7()`.
+
+  ## API Integrations
+
+  Generated ObjectId types expose GraphQL fields as `:id` and AshTypescript
+  fields as `string` by default. For stricter TypeScript clients:
+
+      prefixed_id do
+        prefix "post"
+        typescript_brand? true
+      end
+
+  AshTypescript will then see `string & { readonly __prefix: "post" }`.
+
+  Phoenix route helpers can use prefixed primary keys directly:
+
+      prefixed_id do
+        prefix "post"
+        phoenix_param? true
+      end
+
+  When enabled, `Phoenix.Param` must be available while the resource compiles.
+
+  ## Global Lookup
+
+  `resource/2` and `get/3` resolve an incoming prefixed ID against an explicit
+  domain allowlist:
+
+      AshPrefixedId.resource([MyApp.Accounts, MyApp.Blog], "post_...")
+      AshPrefixedId.get([MyApp.Accounts, MyApp.Blog], "post_...", actor: actor)
+
+  Duplicate prefixes across the allowed domains are reported as an ambiguity
+  instead of guessing.
+
+  ## Data Layer Support
+
+  The core ObjectId type stores as `:uuid`, so the prefix/cast/render behavior
+  is not inherently tied to Postgres. ETS is covered by the test suite, and
+  AshPostgres is covered by the example app. Database-side UUIDv7 defaults and
+  `AshPrefixedId.PostgresExtension` are AshPostgres-only.
+
+  Other data layers, such as AshSqlite, should work for normal type behavior if
+  they support Ash UUID storage. They should not use `migration_default?` unless
+  they provide compatible migration support.
   """
 
   alias AshPrefixedId.ParsedId
@@ -268,6 +367,9 @@ defmodule AshPrefixedId do
 
   @doc """
   Finds the resource for a prefixed ID with explicit errors.
+
+  Prefer this over `find_resource_for_id/2` when the caller needs to distinguish
+  invalid input, unknown prefixes, and ambiguous prefixes.
   """
   @spec resource([module()], String.t()) :: {:ok, module()} | {:error, resource_lookup_error()}
   def resource(domains, id) when is_list(domains) and is_binary(id) do
@@ -293,6 +395,10 @@ defmodule AshPrefixedId do
 
   Options are passed through to `Ash.get/3`, so `:actor`, `:authorize?`,
   `:tenant`, and other Ash options continue to work.
+
+  This function is intentionally allowlist-based. Pass only the Ash domains that
+  should be visible to the current boundary, for example the domains exposed by
+  an admin API or a webhook endpoint.
   """
   @spec get([module()], String.t(), Keyword.t()) :: {:ok, struct()} | {:error, term()}
   def get(domains, id, opts \\ []) when is_list(domains) and is_binary(id) and is_list(opts) do
@@ -341,7 +447,7 @@ defmodule AshPrefixedId do
 
   @doc """
   Same as `map_prefixes_to_resources`, but returns only the entries that
-  contain more than resource for the given prefix.
+  contain more than one resource for the given prefix.
 
   This function can be used to warn whenever duplicate prefixes are present in
   your modules.

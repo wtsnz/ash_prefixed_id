@@ -158,6 +158,15 @@ resource compiles.
 See `examples/prefixed_id_demo` for a Phoenix/AshPostgres spike with GraphQL,
 JSON:API, AshTypescript RPC, and LiveView.
 
+## Guides
+
+- [Getting Started](guides/getting-started.md): add the extension to a resource and create relationships.
+- [PostgreSQL UUIDv7](guides/postgres-uuidv7.md): install database-side UUIDv7 generation and use PostgreSQL 18 native `uuidv7()`.
+- [Legacy Prefixes](guides/legacy-prefixes.md): rename prefixes without breaking old IDs.
+- [API Integrations](guides/api-integrations.md): GraphQL, JSON:API, AshTypescript, and Phoenix routes.
+- [Global Lookup](guides/global-lookup.md): resolve prefixed IDs against an explicit domain allowlist.
+- [Data Layer Support](guides/data-layer-support.md): what is portable, what is Postgres-only, and how to think about AshSqlite.
+
 ### Utility Functions
 
 ```elixir

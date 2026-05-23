@@ -2,9 +2,9 @@ defmodule AshPrefixedId.AnyPrefixedId do
   @moduledoc """
   A universal PrefixedId type that accepts any prefixed ID.
 
-  This type is useful as a global replacement for `:uuid` when you want
-  all UUID fields (including action arguments, non-AshPrefixedId resources,
-  and manual attributes) to accept prefixed IDs.
+  This type is useful as a global replacement for `:uuid` when you want UUID
+  arguments, manual attributes, or non-`AshPrefixedId` resources to accept
+  prefixed IDs.
 
   ## Usage
 
@@ -13,16 +13,19 @@ defmodule AshPrefixedId.AnyPrefixedId do
       config :ash,
         custom_types: [uuid: AshPrefixedId.AnyPrefixedId]
 
-  This replaces the standard `Ash.Type.UUID` for all `:uuid` references,
-  making them accept both prefixed IDs (`"user_CWzLBdFy2f1XhrtesFferY"`)
-  and raw UUIDs (`"550e8400-e29b-41d4-a716-446655440000"`).
+  This replaces the standard `Ash.Type.UUID` for all `:uuid` references in Ash,
+  making them accept both prefixed IDs (`"user_CWzLBdFy2f1XhrtesFferY"`) and raw
+  UUIDs (`"550e8400-e29b-41d4-a716-446655440000"`).
 
   ## Behavior
 
-  - **Input**: Accepts any prefixed ID or raw UUID string
-  - **Storage**: Native PostgreSQL UUID binary (16 bytes)
-  - **Output**: Returns the original prefixed form if available, otherwise
-    the raw UUID string from the database
+  - Input accepts any syntactically valid prefixed ID or raw UUID string.
+  - Dumping a prefixed ID stores the underlying UUID binary.
+  - Stored values cast back as raw UUID strings, because this type has no
+    resource context and cannot know which prefix to reapply.
+
+  Use generated resource-specific ObjectId types when outputs must render with a
+  resource prefix.
   """
 
   use Ash.Type

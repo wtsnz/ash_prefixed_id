@@ -12,7 +12,7 @@ if Code.ensure_loaded?(AshPostgres.CustomExtension) do
           use AshPostgres.Repo, otp_app: :my_app
 
           def installed_extensions do
-            ["ash-prefixed-id", ...]
+            ["ash-functions", AshPrefixedId.PostgresExtension]
           end
         end
 
@@ -20,6 +20,10 @@ if Code.ensure_loaded?(AshPostgres.CustomExtension) do
 
         mix ash.codegen install_prefixed_id_extension
         mix ash.migrate
+
+    If your application runs on PostgreSQL 18 or newer and you want to use the
+    native `uuidv7()` function, you do not need this extension for ID generation.
+    Set `migration_default_function "uuidv7()"` in the resource instead.
 
     ## A note on `LEAKPROOF`
 

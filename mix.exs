@@ -20,6 +20,7 @@ defmodule AshPrefixedId.MixProject do
       description: @description,
       source_url: @project_url,
       homepage_url: @project_url,
+      docs: docs(),
       elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
@@ -37,10 +38,33 @@ defmodule AshPrefixedId.MixProject do
     [
       name: :ash_prefixed_id,
       licenses: ["MIT"],
-      files: ["lib", ".formatter.exs", "mix.exs", "README*", "LICENSE*", "CHANGELOG*"],
+      files: ["lib", "guides", ".formatter.exs", "mix.exs", "README*", "LICENSE*", "CHANGELOG*"],
       links: %{
         GitHub: @project_url
       }
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      source_ref: "v#{@version}",
+      source_url: @project_url,
+      extras: [
+        "README.md",
+        "guides/getting-started.md",
+        "guides/postgres-uuidv7.md",
+        "guides/legacy-prefixes.md",
+        "guides/api-integrations.md",
+        "guides/global-lookup.md",
+        "guides/data-layer-support.md",
+        "CHANGELOG.md",
+        "LICENSE"
+      ],
+      groups_for_extras: [
+        Guides: ~r/guides\//,
+        Project: ["README.md", "CHANGELOG.md", "LICENSE"]
+      ]
     ]
   end
 
