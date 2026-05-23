@@ -120,6 +120,9 @@ prefixed_id do
 end
 ```
 
+`migration_default_function` must be a zero-arity PostgreSQL function name, for
+example `uuidv7()` or `extensions.uuidv7()`.
+
 ### API Integrations
 
 Generated ObjectId types expose prefixed IDs as GraphQL `ID` values and

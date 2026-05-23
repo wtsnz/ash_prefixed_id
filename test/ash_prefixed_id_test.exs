@@ -77,6 +77,38 @@ defmodule AshPrefixedIdTest do
              "fragment(\"uuidv7()\")"
   end
 
+  test "invalid Postgres migration default functions fail during compilation" do
+    module = "AshPrefixedId.Test.Resources.InvalidDefault#{System.unique_integer([:positive])}"
+
+    code = """
+    defmodule #{module} do
+      use Ash.Resource,
+        domain: AshPrefixedId.Test.Domain,
+        data_layer: AshPostgres.DataLayer,
+        extensions: [AshPrefixedId]
+
+      prefixed_id do
+        prefix "invalid_default"
+        migration_default?(true)
+        migration_default_function "uuidv7(); drop table todos"
+      end
+
+      postgres do
+        table "invalid_defaults"
+        repo AshPrefixedId.Test.Repo
+      end
+
+      attributes do
+        uuid_v7_primary_key(:id)
+      end
+    end
+    """
+
+    assert_raise Spark.Error.DslError, ~r/Invalid migration_default_function/, fn ->
+      Code.compile_string(code)
+    end
+  end
+
   test "parse/1 exposes prefixed ID parts" do
     uuid = "5d446d08-df6a-404d-a1e5-decc78429b3d"
     id = AshPrefixedId.to_prefixed_id(uuid, "billing_account")

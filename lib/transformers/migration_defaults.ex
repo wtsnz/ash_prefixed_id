@@ -24,6 +24,7 @@ if Code.ensure_loaded?(AshPostgres.DataLayer) do
             truthy when truthy in [true, {:ok, true}] ->
               [pk] = Ash.Resource.Info.primary_key(dsl_state)
               function = AshPrefixedId.Info.prefixed_id_migration_default_function!(dsl_state)
+              validate_function!(dsl_state, function)
 
               migration_defaults =
                 [{pk, "fragment(#{inspect(function)})"}]
@@ -46,6 +47,20 @@ if Code.ensure_loaded?(AshPostgres.DataLayer) do
         end
 
       {:ok, dsl_state}
+    end
+
+    defp validate_function!(dsl_state, function) do
+      if Regex.match?(~r/\A[a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)?\(\)\z/, function) do
+        :ok
+      else
+        module = Transformer.get_persisted(dsl_state, :module)
+
+        raise Spark.Error.DslError,
+          module: module,
+          path: [:prefixed_id, :migration_default_function],
+          message:
+            "Invalid migration_default_function #{inspect(function)}. Expected a zero-arity PostgreSQL function like \"uuidv7()\" or \"extensions.uuidv7()\"."
+      end
     end
   end
 end
