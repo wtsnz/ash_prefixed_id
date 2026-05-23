@@ -88,9 +88,12 @@ defmodule AshPrefixedIdTest do
   end
 
   test "parse/1 reports invalid ID reasons" do
+    "user_" <> slug = AshPrefixedId.to_prefixed_id(Ecto.UUID.bingenerate(), "user")
+
     assert AshPrefixedId.parse("not-an-id") == {:error, :missing_separator}
     assert AshPrefixedId.parse("_abc") == {:error, :empty_prefix}
     assert AshPrefixedId.parse("user_") == {:error, :empty_suffix}
+    assert AshPrefixedId.parse("User_#{slug}") == {:error, :invalid_start}
     assert AshPrefixedId.parse("user_not_base58!") == {:error, :invalid_suffix}
     assert AshPrefixedId.parse(123) == {:error, :not_a_string}
 
@@ -98,6 +101,31 @@ defmodule AshPrefixedIdTest do
 
     assert_raise ArgumentError, ~r/invalid prefixed ID/, fn ->
       AshPrefixedId.parse!("not-an-id")
+    end
+  end
+
+  test "invalid resource prefixes fail during compilation" do
+    module = "AshPrefixedId.Test.Resources.InvalidPrefix#{System.unique_integer([:positive])}"
+
+    code = """
+    defmodule #{module} do
+      use Ash.Resource,
+        domain: AshPrefixedId.Test.Domain,
+        data_layer: Ash.DataLayer.Ets,
+        extensions: [AshPrefixedId]
+
+      prefixed_id do
+        prefix "Invalid"
+      end
+
+      attributes do
+        uuid_primary_key(:id)
+      end
+    end
+    """
+
+    assert_raise Spark.Error.DslError, ~r/Invalid prefixed ID prefix/, fn ->
+      Code.compile_string(code)
     end
   end
 

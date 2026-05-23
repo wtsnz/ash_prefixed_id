@@ -94,8 +94,11 @@ defmodule AshPrefixedId.Type do
 
   def parse_object_id(input) when is_binary(input) do
     with {:ok, prefix, slug} <- split_object_id(input),
+         :ok <- AshPrefixedId.Prefix.validate(prefix),
          {:ok, uuid} <- decode_slug(slug) do
       {:ok, prefix, slug, uuid}
+    else
+      {:error, reason} -> {:error, reason}
     end
   end
 

@@ -47,16 +47,19 @@ defmodule AshPrefixedId do
           | :missing_separator
           | :empty_prefix
           | :empty_suffix
+          | AshPrefixedId.Prefix.validation_error()
           | :invalid_suffix
           | :invalid_uuid
 
   @transformers (if Code.ensure_loaded?(AshPostgres.DataLayer) do
                    [
+                     AshPrefixedId.Transformers.ValidatePrefix,
                      AshPrefixedId.Transformers.BelongsToAttribute,
                      AshPrefixedId.Transformers.MigrationDefaults
                    ]
                  else
                    [
+                     AshPrefixedId.Transformers.ValidatePrefix,
                      AshPrefixedId.Transformers.BelongsToAttribute
                    ]
                  end)
