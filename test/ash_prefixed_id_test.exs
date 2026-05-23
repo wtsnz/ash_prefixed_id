@@ -139,6 +139,35 @@ defmodule AshPrefixedIdTest do
     end
   end
 
+  test "custom UUID primary key types fail during compilation" do
+    module = "AshPrefixedId.Test.Resources.CustomUuid#{System.unique_integer([:positive])}"
+
+    code = """
+    defmodule #{module} do
+      use Ash.Resource,
+        domain: AshPrefixedId.Test.Domain,
+        data_layer: Ash.DataLayer.Ets,
+        extensions: [AshPrefixedId]
+
+      prefixed_id do
+        prefix "custom_uuid"
+      end
+
+      attributes do
+        attribute :id, AshPrefixedId.Test.CustomUuidType do
+          primary_key?(true)
+          allow_nil?(false)
+          public?(true)
+        end
+      end
+    end
+    """
+
+    assert_raise Spark.Error.DslError, ~r/Expected primary key type to be Ash.Type.UUID/, fn ->
+      Code.compile_string(code)
+    end
+  end
+
   test "duplicate legacy prefixes fail during compilation" do
     module = "AshPrefixedId.Test.Resources.DuplicateLegacy#{System.unique_integer([:positive])}"
 

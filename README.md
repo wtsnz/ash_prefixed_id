@@ -46,6 +46,8 @@ Prefixes are validated at compile time. They must use lowercase ASCII letters
 and underscores, start and end with a letter, and be no longer than 63
 characters.
 
+Primary keys must use `uuid_primary_key` or `uuid_v7_primary_key`.
+
 If a resource has been renamed, keep accepting older external IDs with
 `legacy_prefixes`:
 

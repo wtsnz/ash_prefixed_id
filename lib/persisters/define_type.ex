@@ -35,6 +35,15 @@ defmodule AshPrefixedId.Persisters.DefineType do
           end
 
           uuid_type = attr.type
+
+          if uuid_type not in [Ash.Type.UUID, Ash.Type.UUIDv7] do
+            raise Spark.Error.DslError,
+              module: module,
+              message:
+                "Expected primary key type to be Ash.Type.UUID or Ash.Type.UUIDv7, got #{inspect(uuid_type)}",
+              path: [:attributes, pk]
+          end
+
           new_type = Module.concat(module, ObjectId)
 
           attr = %{
