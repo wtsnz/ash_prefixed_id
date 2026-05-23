@@ -1,5 +1,7 @@
 # AshPrefixedId
 
+[![Elixir CI](https://github.com/wtsnz/ash_prefixed_id/actions/workflows/elixir.yaml/badge.svg)](https://github.com/wtsnz/ash_prefixed_id/actions/workflows/elixir.yaml)
+
 An [Ash](https://ash-hq.org/) extension for working with prefixed IDs (e.g. `user_CWzLBdFy2f1XhrtesFferY`).
 
 Inspired by [Stripe's object IDs](https://dev.to/stripe/designing-apis-for-humans-object-ids-3o5a), this library lets you use human-readable, prefixed identifiers while storing standard UUIDs in the database.
