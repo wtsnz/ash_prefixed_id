@@ -4,6 +4,7 @@ defmodule AshPrefixedId.Persisters.DefineType do
 
   def transform(dsl) do
     prefix = AshPrefixedId.Info.prefixed_id_prefix!(dsl)
+    accepted_prefixes = [prefix | AshPrefixedId.Info.prefixed_id_legacy_prefixes!(dsl)]
     module = Spark.Dsl.Transformer.get_persisted(dsl, :module)
 
     {dsl, uuid_type} =
@@ -53,7 +54,8 @@ defmodule AshPrefixedId.Persisters.DefineType do
         dsl,
         [
           uuid_type: uuid_type,
-          prefix: prefix
+          prefix: prefix,
+          accepted_prefixes: accepted_prefixes
         ],
         quote do
           defmodule ObjectId do
@@ -66,7 +68,7 @@ defmodule AshPrefixedId.Persisters.DefineType do
             def cast_input(input, constraints) do
               AshPrefixedId.Type.cast_input(
                 unquote(uuid_type),
-                unquote(prefix),
+                unquote(accepted_prefixes),
                 input,
                 constraints
               )
@@ -86,7 +88,7 @@ defmodule AshPrefixedId.Persisters.DefineType do
             def dump_to_native(input, constraints) do
               AshPrefixedId.Type.dump_to_native(
                 unquote(uuid_type),
-                unquote(prefix),
+                unquote(accepted_prefixes),
                 input,
                 constraints
               )

@@ -46,6 +46,19 @@ Prefixes are validated at compile time. They must use lowercase ASCII letters
 and underscores, start and end with a letter, and be no longer than 63
 characters.
 
+If a resource has been renamed, keep accepting older external IDs with
+`legacy_prefixes`:
+
+```elixir
+prefixed_id do
+  prefix "account"
+  legacy_prefixes ["user"]
+end
+```
+
+New records generate `account_...` IDs. Existing `user_...` IDs still cast and
+resolve to the same resource.
+
 ```elixir
 Post
 |> Ash.Changeset.for_create(:create, %{title: "Hello world"})
@@ -128,6 +141,10 @@ AshPrefixedId.to_prefixed_id(uuid_binary, "user")
 
 # Find which resource a prefixed ID belongs to
 AshPrefixedId.find_resource_for_id(domains, "user_CWzLBdFy2f1XhrtesFferY")
+
+# Return a resource's primary and legacy prefixes
+AshPrefixedId.prefixes_for_resource(MyApp.Accounts.User)
+#=> ["account", "user"]
 
 # Detect duplicate prefixes across domains
 AshPrefixedId.find_duplicate_prefixes(domains)

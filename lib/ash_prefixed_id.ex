@@ -84,6 +84,11 @@ defmodule AshPrefixedId do
         doc: "The prefix to use for the given resource",
         required: true
       ],
+      legacy_prefixes: [
+        type: {:list, :string},
+        doc: "Additional old prefixes accepted for this resource when parsing incoming IDs.",
+        default: []
+      ],
       migration_default?: [
         type: :boolean,
         doc:
@@ -210,10 +215,7 @@ defmodule AshPrefixedId do
       domain
       |> Ash.Domain.Info.resources()
       |> Enum.find_value(fn resource ->
-        case AshPrefixedId.Info.prefixed_id_prefix(resource) do
-          {:ok, ^prefix} -> resource
-          _ -> nil
-        end
+        if prefix in prefixes_for_resource(resource), do: resource
       end)
     end)
   end
@@ -246,12 +248,22 @@ defmodule AshPrefixedId do
       domain
       |> Ash.Domain.Info.resources()
       |> Enum.reduce(mapping, fn resource, mapping ->
-        case AshPrefixedId.Info.prefixed_id_prefix(resource) do
-          {:ok, prefix} -> Map.update(mapping, prefix, [resource], &[resource | &1])
-          _ -> mapping
-        end
+        Enum.reduce(prefixes_for_resource(resource), mapping, fn prefix, mapping ->
+          Map.update(mapping, prefix, [resource], &[resource | &1])
+        end)
       end)
     end)
+  end
+
+  @doc """
+  Returns the primary prefix followed by any legacy prefixes for a resource.
+  """
+  @spec prefixes_for_resource(module()) :: [String.t()]
+  def prefixes_for_resource(resource) do
+    case AshPrefixedId.Info.prefixed_id_prefix(resource) do
+      {:ok, prefix} -> [prefix | legacy_prefixes_for_resource(resource)]
+      _ -> []
+    end
   end
 
   @doc """
@@ -312,5 +324,13 @@ defmodule AshPrefixedId do
   @spec to_prefixed_id(binary(), String.t()) :: String.t()
   def to_prefixed_id(uuid_bin_or_string, prefix) when is_binary(prefix) do
     Type.encode_uuid(uuid_bin_or_string, prefix)
+  end
+
+  defp legacy_prefixes_for_resource(resource) do
+    case AshPrefixedId.Info.prefixed_id_legacy_prefixes(resource) do
+      {:ok, legacy_prefixes} when is_list(legacy_prefixes) -> legacy_prefixes
+      legacy_prefixes when is_list(legacy_prefixes) -> legacy_prefixes
+      _ -> []
+    end
   end
 end

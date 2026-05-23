@@ -7,5 +7,6 @@ defmodule AshPrefixedId.Test.Domain do
     resource(AshPrefixedId.Test.Resources.Comment)
     resource(AshPrefixedId.Test.Resources.Unrelated)
     resource(AshPrefixedId.Test.Resources.PostgresPost)
+    resource(AshPrefixedId.Test.Resources.LegacyArticle)
   end
 end

@@ -75,11 +75,19 @@ defmodule AshPrefixedId.Type do
     end
   end
 
-  def decode_object_id(input, prefix) do
+  def decode_object_id(input, prefixes) do
+    prefixes = List.wrap(prefixes)
+
     case decode_object_id(input) do
-      {:ok, ^prefix, uuid} -> {:ok, uuid}
-      {:ok, _other, _uuid} -> {:error, "incorrect object prefix"}
-      _ -> :error
+      {:ok, prefix, uuid} ->
+        if prefix in prefixes do
+          {:ok, uuid}
+        else
+          {:error, "incorrect object prefix"}
+        end
+
+      _ ->
+        :error
     end
   end
 

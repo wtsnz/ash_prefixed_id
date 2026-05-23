@@ -4,6 +4,7 @@ defmodule AshPrefixedIdTest do
   alias AshPrefixedId
   alias AshPrefixedId.Test.Domain
   alias AshPrefixedId.Test.Resources.Comment
+  alias AshPrefixedId.Test.Resources.LegacyArticle
   alias AshPrefixedId.Test.Resources.Post
   alias AshPrefixedId.Test.Resources.PostgresPost
   alias AshPrefixedId.Test.Resources.Unrelated
@@ -129,8 +130,35 @@ defmodule AshPrefixedIdTest do
     end
   end
 
+  test "duplicate legacy prefixes fail during compilation" do
+    module = "AshPrefixedId.Test.Resources.DuplicateLegacy#{System.unique_integer([:positive])}"
+
+    code = """
+    defmodule #{module} do
+      use Ash.Resource,
+        domain: AshPrefixedId.Test.Domain,
+        data_layer: Ash.DataLayer.Ets,
+        extensions: [AshPrefixedId]
+
+      prefixed_id do
+        prefix "account"
+        legacy_prefixes ["account"]
+      end
+
+      attributes do
+        uuid_primary_key(:id)
+      end
+    end
+    """
+
+    assert_raise Spark.Error.DslError, ~r/Duplicate prefixed ID prefix/, fn ->
+      Code.compile_string(code)
+    end
+  end
+
   test "find_resource_for_prefix/2" do
     assert AshPrefixedId.find_resource_for_prefix([Domain], "post") == Post
+    assert AshPrefixedId.find_resource_for_prefix([Domain], "old_article") == LegacyArticle
     assert AshPrefixedId.find_resource_for_prefix([Domain], "florb") == nil
   end
 
@@ -140,8 +168,22 @@ defmodule AshPrefixedIdTest do
   end
 
   test "map_prefixes_to_resources/1" do
-    assert %{"post" => [Post], "c" => [Unrelated, Comment]} =
+    assert %{"post" => [Post], "c" => [Unrelated, Comment], "old_article" => [LegacyArticle]} =
              AshPrefixedId.map_prefixes_to_resources([Domain])
+  end
+
+  test "prefixes_for_resource/1 returns primary and legacy prefixes" do
+    assert AshPrefixedId.prefixes_for_resource(LegacyArticle) == ["article", "old_article"]
+    assert AshPrefixedId.prefixes_for_resource(Unrelated) == ["c"]
+  end
+
+  test "ObjectId types accept legacy prefixes and return primary prefixes from storage" do
+    "article_" <> slug = id = LegacyArticle.ObjectId.generator([]) |> Enum.take(1) |> hd()
+    legacy_id = "old_article_#{slug}"
+
+    assert {:ok, ^legacy_id} = LegacyArticle.ObjectId.cast_input(legacy_id, [])
+    assert {:ok, uuid_binary} = LegacyArticle.ObjectId.dump_to_native(legacy_id, [])
+    assert {:ok, ^id} = LegacyArticle.ObjectId.cast_stored(uuid_binary, [])
   end
 
   test "find_duplicate_prefixes" do
