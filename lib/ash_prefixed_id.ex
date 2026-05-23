@@ -51,6 +51,11 @@ defmodule AshPrefixedId do
           | :invalid_suffix
           | :invalid_uuid
 
+  @type resource_lookup_error ::
+          {:invalid_id, parse_error()}
+          | :unknown_prefix
+          | {:ambiguous_prefix, String.t(), [module()]}
+
   @transformers (if Code.ensure_loaded?(AshPostgres.DataLayer) do
                    [
                      AshPrefixedId.Transformers.ValidatePrefix,
@@ -217,13 +222,9 @@ defmodule AshPrefixedId do
       nil
   """
   def find_resource_for_prefix(domains, prefix) when is_binary(prefix) and is_list(domains) do
-    Enum.find_value(domains, fn domain ->
-      domain
-      |> Ash.Domain.Info.resources()
-      |> Enum.find_value(fn resource ->
-        if prefix in prefixes_for_resource(resource), do: resource
-      end)
-    end)
+    domains
+    |> resources_for_prefix(prefix)
+    |> List.first()
   end
 
   @doc """
@@ -242,6 +243,62 @@ defmodule AshPrefixedId do
     case Type.decode_object_id(id) do
       {:ok, prefix, _uuid} -> find_resource_for_prefix(domains, prefix)
       _ -> nil
+    end
+  end
+
+  @doc """
+  Returns all resources in the given domains that accept a prefix.
+  """
+  @spec resources_for_prefix([module()], String.t()) :: [module()]
+  def resources_for_prefix(domains, prefix) when is_list(domains) and is_binary(prefix) do
+    domains
+    |> Enum.flat_map(&Ash.Domain.Info.resources/1)
+    |> Enum.filter(&(prefix in prefixes_for_resource(&1)))
+  end
+
+  @doc """
+  Finds the resource for a prefixed ID with explicit errors.
+  """
+  @spec resource([module()], String.t()) :: {:ok, module()} | {:error, resource_lookup_error()}
+  def resource(domains, id) when is_list(domains) and is_binary(id) do
+    case Type.parse_object_id(id) do
+      {:ok, prefix, _slug, _uuid} -> resource_for_prefix(domains, prefix)
+      {:error, reason} -> {:error, {:invalid_id, reason}}
+    end
+  end
+
+  @doc """
+  Finds the resource for a prefixed ID or raises `ArgumentError`.
+  """
+  @spec resource!([module()], String.t()) :: module()
+  def resource!(domains, id) do
+    case resource(domains, id) do
+      {:ok, resource} -> resource
+      {:error, error} -> raise ArgumentError, resource_lookup_error_message(error)
+    end
+  end
+
+  @doc """
+  Looks up a record by prefixed ID after resolving its resource from allowed domains.
+
+  Options are passed through to `Ash.get/3`, so `:actor`, `:authorize?`,
+  `:tenant`, and other Ash options continue to work.
+  """
+  @spec get([module()], String.t(), Keyword.t()) :: {:ok, struct()} | {:error, term()}
+  def get(domains, id, opts \\ []) when is_list(domains) and is_binary(id) and is_list(opts) do
+    with {:ok, resource} <- resource(domains, id) do
+      Ash.get(resource, id, opts)
+    end
+  end
+
+  @doc """
+  Looks up a record by prefixed ID or raises.
+  """
+  @spec get!([module()], String.t(), Keyword.t()) :: struct()
+  def get!(domains, id, opts \\ []) when is_list(domains) and is_binary(id) and is_list(opts) do
+    case resource(domains, id) do
+      {:ok, resource} -> Ash.get!(resource, id, opts)
+      {:error, error} -> raise ArgumentError, resource_lookup_error_message(error)
     end
   end
 
@@ -338,5 +395,23 @@ defmodule AshPrefixedId do
       legacy_prefixes when is_list(legacy_prefixes) -> legacy_prefixes
       _ -> []
     end
+  end
+
+  defp resource_for_prefix(domains, prefix) do
+    case resources_for_prefix(domains, prefix) do
+      [] -> {:error, :unknown_prefix}
+      [resource] -> {:ok, resource}
+      resources -> {:error, {:ambiguous_prefix, prefix, resources}}
+    end
+  end
+
+  defp resource_lookup_error_message({:invalid_id, reason}) do
+    "invalid prefixed ID: #{reason}"
+  end
+
+  defp resource_lookup_error_message(:unknown_prefix), do: "unknown prefixed ID prefix"
+
+  defp resource_lookup_error_message({:ambiguous_prefix, prefix, resources}) do
+    "ambiguous prefixed ID prefix #{inspect(prefix)} for resources #{inspect(resources)}"
   end
 end

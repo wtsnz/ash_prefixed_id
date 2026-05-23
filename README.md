@@ -154,6 +154,13 @@ AshPrefixedId.to_prefixed_id(uuid_binary, "user")
 # Find which resource a prefixed ID belongs to
 AshPrefixedId.find_resource_for_id(domains, "user_CWzLBdFy2f1XhrtesFferY")
 
+# Resolve or fetch globally by prefixed ID from an allowed domain list
+AshPrefixedId.resource(domains, "user_CWzLBdFy2f1XhrtesFferY")
+#=> {:ok, MyApp.Accounts.User}
+
+AshPrefixedId.get(domains, "user_CWzLBdFy2f1XhrtesFferY", actor: current_user, authorize?: true)
+#=> {:ok, %MyApp.Accounts.User{}}
+
 # Return a resource's primary and legacy prefixes
 AshPrefixedId.prefixes_for_resource(MyApp.Accounts.User)
 #=> ["account", "user"]

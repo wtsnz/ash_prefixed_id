@@ -170,6 +170,44 @@ defmodule AshPrefixedIdTest do
     assert AshPrefixedId.find_resource_for_id([Domain], "florb_CWzLBdFy2f1XhrtesFferY") == nil
   end
 
+  test "resource/2 resolves resources with explicit lookup errors" do
+    assert AshPrefixedId.resource([Domain], "post_CWzLBdFy2f1XhrtesFferY") == {:ok, Post}
+    assert AshPrefixedId.resource!([Domain], "post_CWzLBdFy2f1XhrtesFferY") == Post
+
+    assert AshPrefixedId.resources_for_prefix([Domain], "old_article") == [LegacyArticle]
+
+    assert AshPrefixedId.resource([Domain], "florb_CWzLBdFy2f1XhrtesFferY") ==
+             {:error, :unknown_prefix}
+
+    assert AshPrefixedId.resource([Domain], "not-an-id") ==
+             {:error, {:invalid_id, :missing_separator}}
+
+    assert {:error, {:ambiguous_prefix, "c", resources}} =
+             AshPrefixedId.resource([Domain], "c_CWzLBdFy2f1XhrtesFferY")
+
+    assert Enum.sort(resources) == Enum.sort([Comment, Unrelated])
+
+    assert_raise ArgumentError, ~r/unknown prefixed ID prefix/, fn ->
+      AshPrefixedId.resource!([Domain], "florb_CWzLBdFy2f1XhrtesFferY")
+    end
+  end
+
+  test "get/3 and get!/3 fetch records by global prefixed ID" do
+    post =
+      Post
+      |> Ash.Changeset.for_create(:create, %{title: "Global lookup"})
+      |> Ash.create!()
+
+    assert {:ok, fetched} = AshPrefixedId.get([Domain], post.id)
+    assert fetched.id == post.id
+    assert fetched.title == "Global lookup"
+
+    assert AshPrefixedId.get!([Domain], post.id).id == post.id
+
+    assert AshPrefixedId.get([Domain], "florb_CWzLBdFy2f1XhrtesFferY") ==
+             {:error, :unknown_prefix}
+  end
+
   test "map_prefixes_to_resources/1" do
     assert %{"post" => [Post], "c" => [Unrelated, Comment], "old_article" => [LegacyArticle]} =
              AshPrefixedId.map_prefixes_to_resources([Domain])
