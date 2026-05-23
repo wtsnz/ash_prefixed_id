@@ -105,6 +105,12 @@ defmodule AshPrefixedId do
         doc:
           "When true, generated ObjectId types expose a branded TypeScript string instead of plain `string`.",
         default: false
+      ],
+      phoenix_param?: [
+        type: :boolean,
+        doc:
+          "When true and Phoenix is available, implements `Phoenix.Param` for the resource using its prefixed primary key.",
+        default: false
       ]
     ]
   }

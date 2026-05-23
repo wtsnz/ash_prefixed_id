@@ -126,6 +126,18 @@ end
 AshTypescript will see `string & { readonly __prefix: "account" }` for that
 ObjectId type.
 
+Phoenix routes can also use prefixed IDs directly:
+
+```elixir
+prefixed_id do
+  prefix "account"
+  phoenix_param? true
+end
+```
+
+When Phoenix is available, this implements `Phoenix.Param` for the resource and
+returns the prefixed primary key from route helpers.
+
 See `examples/prefixed_id_demo` for a Phoenix/AshPostgres spike with GraphQL,
 JSON:API, AshTypescript RPC, and LiveView.
 

@@ -21,7 +21,7 @@ defmodule AshPrefixedId.Persisters.DefineType do
 
     module = Spark.Dsl.Transformer.get_persisted(dsl, :module)
 
-    {dsl, uuid_type} =
+    {dsl, uuid_type, primary_key} =
       case Ash.Resource.Info.primary_key(dsl) do
         [pk] ->
           attr = Ash.Resource.Info.attribute(dsl, pk)
@@ -48,7 +48,7 @@ defmodule AshPrefixedId.Persisters.DefineType do
               record.__struct__ == attr.__struct__ && record.name == attr.name
             end)
 
-          {dsl, uuid_type}
+          {dsl, uuid_type, pk}
 
         [] ->
           raise Spark.Error.DslError,
@@ -146,10 +146,40 @@ defmodule AshPrefixedId.Persisters.DefineType do
         end
       )
 
+    dsl = maybe_define_phoenix_param(dsl, module, primary_key)
+
     # Update FK attributes for belongs_to relationships pointing to AshPrefixedId resources
     dsl = update_fk_attributes(dsl, module)
 
     {:ok, dsl}
+  end
+
+  defp maybe_define_phoenix_param(dsl, module, primary_key) do
+    case AshPrefixedId.Info.prefixed_id_phoenix_param?(dsl) do
+      value when value in [true, {:ok, true}] ->
+        Spark.Dsl.Transformer.eval(
+          dsl,
+          [module: module, primary_key: primary_key],
+          quote do
+            case Code.ensure_compiled(Phoenix.Param) do
+              {:module, Phoenix.Param} ->
+                defimpl Phoenix.Param, for: unquote(module) do
+                  def to_param(resource) do
+                    resource
+                    |> Map.fetch!(unquote(primary_key))
+                    |> to_string()
+                  end
+                end
+
+              _ ->
+                :ok
+            end
+          end
+        )
+
+      _ ->
+        dsl
+    end
   end
 
   # Scans belongs_to relationships and updates FK attribute types to use
